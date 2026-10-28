@@ -2,436 +2,318 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Pi Runner - Galactic Adventure</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Pi Runner 3D</title>
 <style>
 *{box-sizing:border-box}
-body{
- margin:0;background:#100725;color:white;
- font-family:Arial,sans-serif;text-align:center
-}
-header{
- background:linear-gradient(120deg,#170b38,#422078,#170b38);
- padding:13px 6px 10px;
- border-bottom:2px solid #f7c945
-}
-h1{margin:0;color:#ffd65a;font-size:27px;letter-spacing:2px}
-.subtitle{margin:5px 0;color:#e1d3ff;font-size:13px}
-.stats{
- display:flex;justify-content:center;gap:22px;
- flex-wrap:wrap;padding:12px 5px;font-weight:bold
-}
-.stats span{color:#ffd65a}
-.gamebox{
- position:relative;width:100%;max-width:520px;margin:auto;
- border:1px solid #6f43a2;overflow:hidden
-}
-canvas{
- display:block;width:100%;height:min(62vh,560px);
- min-height:350px;touch-action:none
-}
-.buttons{
- max-width:520px;margin:10px auto;display:flex;
- justify-content:center;gap:5px;flex-wrap:wrap
-}
-button{
- border:1px solid #ffe38a;border-radius:10px;
- background:linear-gradient(#ffe88a,#e6a926);
- color:#291344;font-size:14px;font-weight:bold;
- padding:12px 13px;min-height:44px
-}
-button:active{transform:scale(.96)}
-#message{font-size:13px;color:#dfd0ff;margin:10px}
-footer{font-size:11px;color:#b4a0d6;padding:12px}
+body{margin:0;overflow:hidden;background:#090515;color:white;font-family:Arial,sans-serif;touch-action:none}
+canvas{display:block}
+#hud{position:fixed;top:12px;left:12px;right:12px;display:flex;justify-content:space-between;z-index:3;pointer-events:none}
+.panel{background:#160c2bd9;border:1px solid #9d62ff;border-radius:12px;padding:9px 13px;box-shadow:0 0 15px #7137c855}
+.label{font-size:10px;color:#cbb5ff;letter-spacing:1px}
+.value{font-size:20px;font-weight:bold}
+#brand{position:fixed;top:83px;left:13px;color:#f8c64c;font-weight:bold;letter-spacing:2px;font-size:13px;z-index:3}
+#message{position:fixed;inset:0;z-index:5;background:#080414dd;display:flex;align-items:center;justify-content:center;text-align:center;padding:25px}
+#card{max-width:340px;background:#160d2c;border:1px solid #a76bff;border-radius:22px;padding:27px 23px;box-shadow:0 0 40px #7137c855}
+h1{margin:0 0 8px;color:#f9c84b;font-size:35px}
+#subtitle{color:#d3c3f4;line-height:1.5;font-size:14px}
+button{border:0;border-radius:12px;background:linear-gradient(135deg,#fbd35a,#eaa52d);color:#24133c;font-size:17px;font-weight:bold;padding:14px 25px;margin-top:20px;min-width:175px}
+#controls{position:fixed;bottom:17px;left:0;right:0;display:flex;justify-content:space-around;z-index:3;pointer-events:none}
+.ctrl{pointer-events:auto;background:#190e2dcc;border:1px solid #b18aff;color:white;width:59px;height:53px;border-radius:15px;font-size:23px;display:flex;align-items:center;justify-content:center;touch-action:manipulation}
+#hint{position:fixed;bottom:81px;left:0;right:0;text-align:center;color:#e0d3ff;font-size:11px;z-index:3;pointer-events:none}
 </style>
 </head>
 <body>
-<header>
- <h1>π PI RUNNER</h1>
- <div class="subtitle">GALACTIC ADVENTURE • SECTOR 001</div>
-</header>
-
-<div class="stats">
- <div>⭐ SCORE: <span id="score">0</span></div>
- <div>🟡 PI COINS: <span id="coins">0</span></div>
- <div>🏆 BEST: <span id="best">0</span></div>
+<div id="hud">
+ <div class="panel"><div class="label">DISTANCE</div><div class="value" id="score">0 m</div></div>
+ <div class="panel"><div class="label">PI COINS</div><div class="value" id="coins">0</div></div>
+ <div class="panel"><div class="label">SPEED</div><div class="value" id="speed">1x</div></div>
+</div>
+<div id="brand">✦ PI RUNNER</div>
+<div id="message">
+ <div id="card">
+  <h1>π RUNNER</h1>
+  <div id="subtitle">Enter the Pi City.<br>Run, dodge, jump and collect golden Pi coins.<br><br>Swipe left/right to change lanes.<br>Swipe up to jump. Swipe down to slide.</div>
+  <button id="start">START RUN</button>
+ </div>
+</div>
+<div id="hint">SWIPE TO MOVE • AVOID VEHICLES • COLLECT COINS</div>
+<div id="controls">
+ <div class="ctrl" id="left">◀</div>
+ <div class="ctrl" id="jump">⬆</div>
+ <div class="ctrl" id="slide">⬇</div>
+ <div class="ctrl" id="right">▶</div>
 </div>
 
-<div class="gamebox">
- <canvas id="game" aria-label="Pi Runner game"></canvas>
-</div>
-
-<div class="buttons">
- <button id="left">⬅ LEFT</button>
- <button id="jump">⬆ JUMP</button>
- <button id="slide">⬇ SLIDE</button>
- <button id="right">RIGHT ➡</button>
-</div>
-
-<button id="start">🚀 START RUN</button>
-<p id="message">Collect golden π coins and avoid the energy barriers!</p>
-
-<footer>
-PI RUNNER • Virtual game coins only. Not real Pi cryptocurrency.
-</footer>
-
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 <script>
-const canvas=document.getElementById("game");
-const ctx=canvas.getContext("2d");
+(() => {
 const $=id=>document.getElementById(id);
-
-let W=500,H=500;
-let lane=1,score=0,coins=0,best=0;
-let running=false,gameStarted=false;
-let items=[],spawn=0,last=0,speed=0.0028;
-let jumpPower=0,sliding=0,animation=0;
-let stars=Array.from({length:65},()=>({
- x:Math.random(),y:Math.random(),r:Math.random()*1.7+.3
-}));
-
-function resize(){
- const r=canvas.getBoundingClientRect();
- const d=Math.min(window.devicePixelRatio||1,2);
- W=Math.max(280,r.width);
- H=Math.max(350,r.height);
- canvas.width=Math.round(W*d);
- canvas.height=Math.round(H*d);
- ctx.setTransform(d,0,0,d,0,0);
- draw();
-}
-window.addEventListener("resize",resize);
-
-function road(t){
- return W*.5+(t===0?0:t)*W*(.11+.38*((t+0)/1));
-}
-function laneX(l,t){
- const half=W*(.13+.36*t);
- return W/2+(l-1)*half*.68;
-}
-function randomLane(){return Math.floor(Math.random()*3)}
-
-function rounded(x,y,w,h,r,color){
- ctx.fillStyle=color;
- ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fill();
+if(!window.THREE){
+ $('subtitle').innerHTML='The 3D engine could not load.<br>Check your internet connection and reload the game.';
+ $('start').textContent='RELOAD';
+ $('start').onclick=()=>location.reload();
+ return;
 }
 
-function drawSky(){
- let g=ctx.createLinearGradient(0,0,0,H);
- g.addColorStop(0,"#100725");
- g.addColorStop(.55,"#291052");
- g.addColorStop(1,"#6530a2");
- ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x100925);
+scene.fog=new THREE.Fog(0x100925,35,145);
 
- // Stars
- for(const s of stars){
-  ctx.fillStyle="rgba(255,230,180,.8)";
-  ctx.beginPath();
-  ctx.arc(s.x*W,s.y*H,s.r,0,Math.PI*2);ctx.fill();
-  if(running){s.y+=.0009;if(s.y>1)s.y=0}
+const camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,250);
+camera.position.set(0,5.2,10);
+camera.lookAt(0,1,-10);
+
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth,innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.6));
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.25;
+document.body.insertBefore(renderer.domElement,document.body.firstChild);
+
+scene.add(new THREE.HemisphereLight(0xb9a2ff,0x171020,2));
+const sun=new THREE.DirectionalLight(0xffffff,2.3);
+sun.position.set(-8,15,7);scene.add(sun);
+
+const purple=new THREE.MeshStandardMaterial({color:0x7625bd,metalness:.5,roughness:.3});
+const gold=new THREE.MeshStandardMaterial({color:0xffc936,metalness:.75,roughness:.22,emissive:0x5c3300});
+const roadMat=new THREE.MeshStandardMaterial({color:0x242035,metalness:.25,roughness:.7});
+const white=new THREE.MeshStandardMaterial({color:0xe8e0ff,metalness:.2,roughness:.35});
+const dark=new THREE.MeshStandardMaterial({color:0x171324,metalness:.25,roughness:.5});
+const cyan=new THREE.MeshStandardMaterial({color:0x4beaff,emissive:0x1389a9,emissiveIntensity:1.5});
+const red=new THREE.MeshStandardMaterial({color:0xff334f,emissive:0x8c0018,emissiveIntensity:.8});
+
+function box(parent,x,y,z,w,h,d,mat){
+ const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);
+ m.position.set(x,y,z);parent.add(m);return m;
+}
+function sphere(parent,x,y,z,r,mat){
+ const m=new THREE.Mesh(new THREE.SphereGeometry(r,16,12),mat);
+ m.position.set(x,y,z);parent.add(m);return m;
+}
+
+// Road
+box(scene,0,-.2,-60,10,.4,150,roadMat);
+box(scene,-5.15,-.15,-60,.18,.15,150,cyan);
+box(scene,5.15,-.15,-60,.18,.15,150,cyan);
+
+// Lane markings
+const markings=[];
+for(let z=-130;z<15;z+=8){
+ for(const x of [-1.67,1.67]){
+  const m=box(scene,x,.015,z,.055,.025,3,white);
+  markings.push(m);
  }
-
- // Distant purple planet
- ctx.fillStyle="rgba(161,93,255,.17)";
- ctx.beginPath();ctx.arc(W*.78,H*.2,W*.16,0,7);ctx.fill();
- ctx.strokeStyle="rgba(225,190,255,.65)";
- ctx.lineWidth=2;ctx.beginPath();
- ctx.ellipse(W*.78,H*.2,W*.22,W*.055,-.25,0,Math.PI*2);
- ctx.stroke();
-
- // Futuristic skyline
- for(let i=0;i<12;i++){
-  const x=i*W/11-W*.025;
-  const bw=W*.055+(i%3)*W*.012;
-  const bh=H*(.12+(i%4)*.035);
-  const y=H*.55-bh;
-  ctx.fillStyle=i%2?"#291347":"#37175a";
-  ctx.fillRect(x,y,bw,bh);
-  ctx.fillStyle="rgba(255,207,83,.75)";
-  for(let wy=y+10;wy<H*.53;wy+=15){
-   ctx.fillRect(x+5,wy,3,4);
-   if(bw>25)ctx.fillRect(x+13,wy,3,4);
-  }
-  ctx.strokeStyle="rgba(180,120,255,.6)";
-  ctx.strokeRect(x,y,bw,bh);
- }
-
- // Horizon glow
- let glow=ctx.createLinearGradient(0,H*.43,0,H*.7);
- glow.addColorStop(0,"rgba(255,196,66,.22)");
- glow.addColorStop(1,"rgba(125,65,255,0)");
- ctx.fillStyle=glow;ctx.fillRect(0,H*.4,W,H*.3);
 }
 
-function drawRoad(){
- const horizon=H*.32;
- ctx.fillStyle="#170b31";
- ctx.beginPath();
- ctx.moveTo(W*.42,horizon);
- ctx.lineTo(W*.58,horizon);
- ctx.lineTo(W*1.05,H);
- ctx.lineTo(-W*.05,H);
- ctx.closePath();ctx.fill();
-
- // Neon road edges
- ctx.strokeStyle="#c47aff";ctx.lineWidth=3;
- ctx.beginPath();ctx.moveTo(W*.42,horizon);ctx.lineTo(-W*.05,H);ctx.stroke();
- ctx.beginPath();ctx.moveTo(W*.58,horizon);ctx.lineTo(W*1.05,H);ctx.stroke();
-
- // Road panels and lane markings
- for(let i=0;i<14;i++){
-  let t=((i/14+animation*.8)%1);
-  let y=horizon+t*(H-horizon);
-  let half=W*(.08+.42*t);
-  ctx.strokeStyle="rgba(165,102,255,"+(.2+.5*t)+")";
-  ctx.lineWidth=1+2*t;
-  ctx.beginPath();ctx.moveTo(W/2-half,y);ctx.lineTo(W/2+half,y);ctx.stroke();
-
-  for(let j=1;j<3;j++){
-   const lx=W/2+(j-1.5)*half*.66;
-   ctx.strokeStyle="rgba(225,198,255,"+(.12+.48*t)+")";
-   ctx.beginPath();
-   ctx.moveTo(lx,y);ctx.lineTo(lx,y+4+t*10);ctx.stroke();
+// City buildings
+const buildings=[];
+const buildingMats=[
+ new THREE.MeshStandardMaterial({color:0x30224d,metalness:.3,roughness:.5}),
+ new THREE.MeshStandardMaterial({color:0x211a3b,metalness:.4,roughness:.45}),
+ new THREE.MeshStandardMaterial({color:0x39234e,metalness:.25,roughness:.5})
+];
+for(let side of [-1,1]){
+ for(let i=0;i<24;i++){
+  const h=5+Math.random()*19,w=3+Math.random()*4,d=4+Math.random()*7;
+  const x=side*(8+Math.random()*13),z=-i*7-5;
+  const b=box(scene,x,h/2,z,w,h,d,buildingMats[i%3]);
+  buildings.push({mesh:b,side});
+  // glowing windows
+  const winMat=i%2?cyan:gold;
+  for(let yy=1.5;yy<h-1;yy+=2.1){
+   for(let xx=-w/2+.7;xx<w/2-.3;xx+=1.1){
+    box(scene,x+xx,yy,z+d/2+.025,.38,.7,.04,winMat);
+   }
   }
  }
-
- // Pi gate at the horizon
- ctx.save();
- ctx.shadowBlur=18;ctx.shadowColor="#ffd45a";
- ctx.strokeStyle="#ffd45a";ctx.lineWidth=3;
- ctx.beginPath();ctx.ellipse(W/2,H*.36,W*.09,H*.045,0,0,Math.PI*2);ctx.stroke();
- ctx.fillStyle="#ffe18a";ctx.font="bold "+Math.max(15,W*.05)+"px Arial";
- ctx.textAlign="center";ctx.fillText("π",W/2,H*.365+5);
- ctx.restore();
 }
 
-function drawCoin(x,y,t){
- const rad=8+t*8;
- ctx.save();ctx.translate(x,y);
- ctx.shadowColor="#ffd84d";ctx.shadowBlur=15;
- const g=ctx.createRadialGradient(-rad*.3,-rad*.3,1,0,0,rad);
- g.addColorStop(0,"#fff4b0");g.addColorStop(.5,"#ffd044");g.addColorStop(1,"#ba7915");
- ctx.fillStyle=g;ctx.beginPath();ctx.arc(0,0,rad,0,Math.PI*2);ctx.fill();
- ctx.strokeStyle="#fff1a4";ctx.lineWidth=2;ctx.stroke();
- ctx.shadowBlur=0;ctx.fillStyle="#5b287f";
- ctx.font="bold "+rad*1.25+"px Arial";ctx.textAlign="center";
- ctx.textBaseline="middle";ctx.fillText("π",0,1);
- ctx.restore();
+// Distant stars
+for(let i=0;i<180;i++){
+ sphere(scene,(Math.random()-.5)*100,8+Math.random()*38,-Math.random()*145,.045,white);
 }
 
-function drawObstacle(o){
- const t=Math.max(.05,o.p);
- const x=laneX(o.lane,t),y=H*.32+t*(H*.68);
- const sz=12+t*30;
- ctx.save();
- ctx.shadowColor="#ff3f91";ctx.shadowBlur=12;
- if(o.type==="barrier"){
-  rounded(x-sz*.8,y-sz*.28,sz*1.6,sz*.56,5,"#ff397e");
-  ctx.fillStyle="#ffd3eb";
-  ctx.fillRect(x-sz*.65,y-sz*.08,sz*1.3,sz*.12);
- }else{
-  rounded(x-sz*.58,y-sz*.8,sz*1.16,sz*1.6,5,"#7a40dc");
-  ctx.strokeStyle="#f6dfff";ctx.lineWidth=2;
-  ctx.strokeRect(x-sz*.58,y-sz*.8,sz*1.16,sz*1.6);
-  ctx.fillStyle="#ff5ba8";
-  ctx.fillRect(x-sz*.25,y-sz*.5,sz*.5,sz);
+// Character group: stylized 3D runner
+const player=new THREE.Group();scene.add(player);
+const skin=new THREE.MeshStandardMaterial({color:0x9b633f,roughness:.7});
+const shirt=new THREE.MeshStandardMaterial({color:0x6b35d4,metalness:.2,roughness:.45});
+const pants=new THREE.MeshStandardMaterial({color:0x22243b,roughness:.6});
+const shoe=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.35});
+const head=sphere(player,0,1.73,0,.25,skin);
+box(player,0,1.23,0,.52,.62,.29,shirt);
+const hair=sphere(player,0,1.92,-.035,.255,dark);
+hair.scale.set(1,.45,1);
+const arms=[],legs=[];
+for(const s of [-1,1]){
+ const arm=box(player,s*.36,1.24,0,.16,.52,.17,shirt);arms.push({mesh:arm,side:s});
+ const leg=box(player,s*.15,.68,0,.19,.52,.22,pants);legs.push({mesh:leg,side:s});
+ box(player,s*.15,.39,.075,.21,.12,.35,shoe);
+}
+player.position.set(0,0,2);
+const shadow=new THREE.Mesh(new THREE.CircleGeometry(.48,24),new THREE.MeshBasicMaterial({color:0x05020b,transparent:true,opacity:.55}));
+shadow.rotation.x=-Math.PI/2;shadow.position.set(0,.015,2);scene.add(shadow);
+
+// Vehicles and collectible coins
+const obstacles=[],collectibles=[];
+const laneX=[-3.25,0,3.25];
+function makeCar(lane,z){
+ const g=new THREE.Group();
+ const paint=new THREE.MeshStandardMaterial({color:[0x8c35e9,0x187bba,0xb52c54,0xdaa52c][Math.floor(Math.random()*4)],metalness:.65,roughness:.25});
+ box(g,0,.58,0,1.65,.7,2.5,paint);
+ box(g,0,1.04,-.15,1.25,.55,1.15,white);
+ box(g,0,.22,.1,1.7,.12,2.45,dark);
+ for(const s of [-1,1]){
+  box(g,s*.57,.37,1.27,.35,.18,.07,red);
+  box(g,s*.57,.37,-1.27,.35,.18,.07,gold);
+  for(const zz of [-.8,.8]){
+   const wheel=sphere(g,s*.85,.28,zz,.28,dark);wheel.scale.set(.55,1,1);
+  }
  }
- ctx.restore();
+ g.position.set(laneX[lane],0,z);scene.add(g);
+ obstacles.push({mesh:g,lane,z,type:'car',passed:false});
+}
+function makeBarrier(lane,z){
+ const g=new THREE.Group();
+ box(g,0,.55,0,1.8,1.1,.45,red);
+ box(g,0,.58,.24,1.55,.16,.05,gold);
+ g.position.set(laneX[lane],0,z);scene.add(g);
+ obstacles.push({mesh:g,lane,z,type:'barrier',passed:false});
+}
+function makeCoin(lane,z,y=1.25){
+ const g=new THREE.Group();
+ const coin=new THREE.Mesh(new THREE.CylinderGeometry(.43,.43,.12,32),gold);
+ coin.rotation.x=Math.PI/2;g.add(coin);
+ const pi=new THREE.Mesh(new THREE.TorusGeometry(.21,.055,8,24),white);
+ g.add(pi);
+ const bar=box(g,0,0,0,.08,.43,.09,white);
+ g.position.set(laneX[lane],y,z);scene.add(g);
+ collectibles.push({mesh:g,lane,z,got:false});
 }
 
-function drawHuman(x,y){
- const lift=jumpPower;
- const bodyY=y-lift;
- const scale=Math.max(.65,Math.min(1.25,H/480));
- ctx.save();ctx.translate(x,bodyY);ctx.scale(scale,scale);
+let running=false,ended=false,lane=1,score=0,coinCount=0,speed=8,elapsed=0;
+let jumpY=0,jumpV=0,slideTimer=0,spawnTimer=1;
+let lastTime=0;
+const clock=new THREE.Clock();
 
- // Shadow
- ctx.fillStyle="rgba(0,0,0,.35)";
- ctx.beginPath();ctx.ellipse(0,25+lift*.2,19,6,0,0,7);ctx.fill();
-
- // Legs
- ctx.strokeStyle="#d8c6ff";ctx.lineWidth=8;ctx.lineCap="round";
- const run=running?Math.sin(animation*18)*8:0;
- ctx.beginPath();ctx.moveTo(-6,8);ctx.lineTo(-9+run,24);ctx.stroke();
- ctx.beginPath();ctx.moveTo(6,8);ctx.lineTo(9-run,24);ctx.stroke();
-
- // Golden shoes
- ctx.strokeStyle="#ffd54c";ctx.lineWidth=6;
- ctx.beginPath();ctx.moveTo(-9+run,24);ctx.lineTo(-3+run,24);ctx.stroke();
- ctx.beginPath();ctx.moveTo(9-run,24);ctx.lineTo(15-run,24);ctx.stroke();
-
- // Arms
- ctx.strokeStyle="#bb87ff";ctx.lineWidth=7;
- ctx.beginPath();ctx.moveTo(-10,-10);ctx.lineTo(-17,-1+run*.6);ctx.stroke();
- ctx.beginPath();ctx.moveTo(10,-10);ctx.lineTo(17,-1-run*.6);ctx.stroke();
-
- // Purple futuristic jacket
- ctx.shadowColor="#a65bff";ctx.shadowBlur=10;
- rounded(-12,-16,24,27,6,"#7a36d0");
- ctx.shadowBlur=0;
- ctx.strokeStyle="#ffd54c";ctx.lineWidth=2;
- ctx.beginPath();ctx.moveTo(0,-13);ctx.lineTo(0,5);ctx.stroke();
- ctx.fillStyle="#ffe077";
- ctx.beginPath();ctx.arc(0,-5,3,0,7);ctx.fill();
-
- // Neck and head
- ctx.fillStyle="#a86d45";ctx.fillRect(-4,-23,8,8);
- ctx.fillStyle="#b87f5a";
- ctx.beginPath();ctx.arc(0,-29,11,0,Math.PI*2);ctx.fill();
-
- // Hair
- ctx.fillStyle="#21132e";
- ctx.beginPath();ctx.arc(0,-33,11,Math.PI,Math.PI*2);ctx.fill();
- ctx.fillRect(-10,-34,4,7);ctx.fillRect(6,-34,4,7);
-
- // Headband visor
- rounded(-9,-31,18,5,2,"#ffd34f");
- ctx.fillStyle="#fff5c1";ctx.fillRect(-5,-30,4,2);
- ctx.restore();
+function reset(){
+ obstacles.forEach(o=>scene.remove(o.mesh));obstacles.length=0;
+ collectibles.forEach(o=>scene.remove(o.mesh));collectibles.length=0;
+ lane=1;score=0;coinCount=0;speed=8;elapsed=0;jumpY=0;jumpV=0;slideTimer=0;spawnTimer=1;
+ player.position.set(0,0,2);player.scale.set(1,1,1);
+ $('score').textContent='0 m';$('coins').textContent='0';$('speed').textContent='1x';
 }
-
-function draw(){
- if(!ctx)return;
- drawSky();drawRoad();
-
- // Items are drawn far away first
- const sorted=[...items].sort((a,b)=>a.p-b.p);
- for(const o of sorted){
-  const t=Math.max(.02,o.p);
-  const x=laneX(o.lane,t);
-  const y=H*.32+t*(H*.68);
-  if(o.type==="coin")drawCoin(x,y,t);
-  else drawObstacle({...o,x,y});
- }
-
- const px=laneX(lane,.88);
- drawHuman(px,H*.85);
-
- if(!running){
-  ctx.fillStyle="rgba(10,3,25,.64)";
-  ctx.fillRect(0,H*.35,W,H*.29);
-  ctx.textAlign="center";
-  ctx.fillStyle="#ffdb65";
-  ctx.font="bold "+Math.max(24,W*.075)+"px Arial";
-  ctx.fillText(gameStarted?"RUN ENDED":"PI RUNNER",W/2,H*.45);
-  ctx.fillStyle="white";
-  ctx.font="bold 13px Arial";
-  ctx.fillText(gameStarted?"Tap RESTART to try again":"YOUR GALACTIC ADVENTURE",W/2,H*.45+27);
- }
+function start(){
+ reset();running=true;ended=false;$('message').style.display='none';
+ clock.getDelta();lastTime=performance.now();
 }
-
-function updateUI(){
- $("score").textContent=score;
- $("coins").textContent=coins;
- $("best").textContent=best;
+function endGame(){
+ running=false;ended=true;
+ $('message').style.display='flex';
+ $('card').innerHTML='<h1>RUN OVER</h1><div id="subtitle">Distance: '+Math.floor(score)+' m<br>Pi coins: '+coinCount+'<br><br>Keep running to beat your record!</div><button id="start">RUN AGAIN</button>';
+ $('start').onclick=start;
 }
+$('start').onclick=start;
 
-function startGame(){
- score=0;coins=0;lane=1;items=[];
- spawn=0;speed=.0028;jumpPower=0;sliding=0;
- running=true;gameStarted=true;last=0;
- $("message").textContent="Run, collect π coins and dodge the energy barriers!";
- $("start").textContent="↻ RESTART";
- updateUI();
- requestAnimationFrame(loop);
-}
-
-function move(d){
- if(running)lane=Math.max(0,Math.min(2,lane+d));
- draw();
-}
-function jump(){
- if(running&&jumpPower===0&&sliding<=0){
-  jumpPower=75;
-  setTimeout(()=>{jumpPower=0},550);
- }
-}
-function slide(){
- if(running&&sliding<=0&&jumpPower===0){
-  sliding=1;
-  setTimeout(()=>{sliding=0},450);
- }
-}
-
-$("left").addEventListener("click",()=>move(-1));
-$("right").addEventListener("click",()=>move(1));
-$("jump").addEventListener("click",jump);
-$("slide").addEventListener("click",slide);
-$("start").addEventListener("click",startGame);
-
+function move(dir){if(!running)return;lane=Math.max(0,Math.min(2,lane+dir));}
+function jump(){if(running&&jumpY===0&&slideTimer<=0)jumpV=8;}
+function slide(){if(running&&jumpY===0){slideTimer=.75;}}
+$('left').onclick=()=>move(-1);$('right').onclick=()=>move(1);
+$('jump').onclick=jump;$('slide').onclick=slide;
 let touchX=0,touchY=0;
-canvas.addEventListener("touchstart",e=>{
- touchX=e.changedTouches[0].clientX;
- touchY=e.changedTouches[0].clientY;
+addEventListener('touchstart',e=>{touchX=e.changedTouches[0].clientX;touchY=e.changedTouches[0].clientY},{passive:true});
+addEventListener('touchend',e=>{
+ if(!running)return;
+ const dx=e.changedTouches[0].clientX-touchX,dy=e.changedTouches[0].clientY-touchY;
+ if(Math.max(Math.abs(dx),Math.abs(dy))<25)return;
+ if(Math.abs(dx)>Math.abs(dy))move(dx>0?1:-1);
+ else if(dy<0)jump();else slide();
 },{passive:true});
-canvas.addEventListener("touchend",e=>{
- const dx=e.changedTouches[0].clientX-touchX;
- const dy=e.changedTouches[0].clientY-touchY;
- if(Math.abs(dx)>30&&Math.abs(dx)>Math.abs(dy))move(dx>0?1:-1);
- else if(dy<-25)jump();
- else if(dy>25)slide();
-},{passive:true});
-
-window.addEventListener("keydown",e=>{
- if(e.key==="ArrowLeft")move(-1);
- if(e.key==="ArrowRight")move(1);
- if(e.key==="ArrowUp"||e.key===" ")jump();
- if(e.key==="ArrowDown")slide();
+addEventListener('keydown',e=>{
+ if(e.key==='ArrowLeft'||e.key==='a')move(-1);
+ if(e.key==='ArrowRight'||e.key==='d')move(1);
+ if(e.key==='ArrowUp'||e.key===' ')jump();
+ if(e.key==='ArrowDown'||e.key==='s')slide();
 });
 
-function loop(t){
- if(!running)return;
- if(!last)last=t;
- const dt=Math.min(40,t-last);
- last=t;
- animation+=dt/1000;
- score+=Math.max(0,Math.floor(dt/80));
- spawn+=dt;
- speed+=dt*.000000035;
-
- if(spawn>700){
-  spawn=0;
-  const l=randomLane();
-  items.push({
-   lane:l,p:0,
-   type:Math.random()<.63?"coin":"obstacle",
-   shape:Math.random()<.5?"barrier":"block"
-  });
-  if(Math.random()<.25){
-   const other=(l+1+randomLane())%3;
-   items.push({lane:other,p:.01,type:"coin",shape:"coin"});
-  }
+function spawn(){
+ const l=Math.floor(Math.random()*3);
+ const r=Math.random();
+ if(r<.48)makeCar(l,-105);
+ else if(r<.72)makeBarrier(l,-105);
+ else {
+  const other=(l+1+Math.floor(Math.random()*2))%3;
+  for(let i=0;i<5;i++)makeCoin(other,-100-i*4,1.25);
  }
-
- for(const o of items)o.p+=speed*dt;
-
- // Collisions near the runner
- for(const o of items){
-  if(o.hit||o.lane!==lane||o.p<.78||o.p>.98)continue;
-  o.hit=true;
-  if(o.type==="coin"){
-   coins++;
-   score+=25;
-  }else if(jumpPower<35&&sliding<=0){
-   running=false;
-   gameStarted=true;
-   best=Math.max(best,score);
-   $("message").textContent="Run over! Score: "+score+" • Coins: "+coins;
-   $("start").textContent="↻ PLAY AGAIN";
-   break;
-  }
- }
-
- items=items.filter(o=>o.p<1.08);
- best=Math.max(best,score);
- updateUI();
- animation+=dt/1000;
- draw();
-
- if(running)requestAnimationFrame(loop);
 }
+function animate(now){
+ requestAnimationFrame(animate);
+ const dt=Math.min((now-lastTime)/1000,.045);lastTime=now;
+ const t=now*.001;
 
-resize();
-draw();
+ // Atmospheric motion even on title screen
+ if(running){
+  elapsed+=dt;
+  // Starts gently, then gradually gets faster over time
+  speed=Math.min(8+elapsed*.22+score*.008,25);
+  score+=speed*dt*.75;
+  $('score').textContent=Math.floor(score)+' m';
+  $('speed').textContent=(speed/8).toFixed(1)+'x';
+
+  // Smooth lane movement
+  player.position.x+=(laneX[lane]-player.position.x)*Math.min(1,dt*12);
+  player.position.y=jumpY;
+  jumpV-=19*dt;jumpY=Math.max(0,jumpY+jumpV*dt);
+  if(jumpY===0)jumpV=0;
+  if(slideTimer>0)slideTimer-=dt;
+  player.scale.y+=(slideTimer>0?.65:1-player.scale.y)*Math.min(1,dt*12);
+  player.scale.y=slideTimer>0?.65:player.scale.y;
+  // Running animation
+  legs.forEach((l,i)=>{l.mesh.rotation.x=Math.sin(t*speed*.75+i*Math.PI)*.55;});
+  arms.forEach((a,i)=>{a.mesh.rotation.x=Math.sin(t*speed*.75+i*Math.PI+Math.PI)*.5;});
+  head.position.y=1.73+Math.abs(Math.sin(t*speed*.75))*.045;
+  shadow.position.x=player.position.x;
+  shadow.material.opacity=.5-jumpY*.07;
+
+  spawnTimer-=dt;
+  if(spawnTimer<=0){spawn();spawnTimer=Math.max(.65,1.65-(speed-8)*.045)+Math.random()*.45;}
+
+  for(let i=obstacles.length-1;i>=0;i--){
+   const o=obstacles[i];o.z+=speed*dt;o.mesh.position.z=o.z;
+   if(!o.passed&&o.z>1.1){
+    o.passed=true;
+    if(o.lane===lane){
+     const safeJump=jumpY>(o.type==='car'?.95:1.35);
+     const safeSlide=slideTimer>0&&o.type==='barrier';
+     if(!safeJump&&!safeSlide){endGame();break;}
+    }
+   }
+   if(o.z>13){scene.remove(o.mesh);obstacles.splice(i,1);}
+  }
+  for(let i=collectibles.length-1;i>=0;i--){
+   const c=collectibles[i];c.z+=speed*dt;c.mesh.position.z=c.z;
+   c.mesh.rotation.y+=dt*2.5;
+   if(!c.got&&Math.abs(c.z-2)<1.5&&c.lane===lane&&Math.abs(jumpY-(c.mesh.position.y-1.25))<2){
+    c.got=true;coinCount++;$('coins').textContent=coinCount;scene.remove(c.mesh);collectibles.splice(i,1);continue;
+   }
+   if(c.z>13){scene.remove(c.mesh);collectibles.splice(i,1);}
+  }
+  markings.forEach(m=>{m.position.z+=speed*dt;if(m.position.z>12)m.position.z-=144;});
+  buildings.forEach(b=>{b.mesh.position.z+=speed*dt*.32;if(b.mesh.position.z>15)b.mesh.position.z-=168;});
+ }
+
+ camera.position.x+=(player.position.x*.18-camera.position.x)*dt*2;
+ camera.position.y=5.1+jumpY*.12;
+ camera.lookAt(player.position.x*.2,1.1,-10);
+ renderer.render(scene,camera);
+}
+addEventListener('resize',()=>{
+ camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
+ renderer.setSize(innerWidth,innerHeight);
+});
+requestAnimationFrame(animate);
+})();
 </script>
 </body>
 </html>
