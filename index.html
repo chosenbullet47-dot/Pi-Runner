@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pi Runner</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#130d29;color:white;font-family:Arial,sans-serif;text-align:center}
+header{padding:14px;background:#251344;border-bottom:2px solid #f5b82e}
+h1{color:#f5b82e;margin:4px}
+p{margin:8px}
+#game{display:block;width:100%;max-width:500px;height:65vh;min-height:350px;margin:auto;background:#211044;touch-action:none}
+button{background:#f5b82e;color:#211044;border:0;border-radius:10px;padding:12px 18px;font-weight:bold;font-size:16px;margin:5px}
+#stats{padding:8px;color:#f5d77b}
+.controls{max-width:500px;margin:auto}
+footer{padding:10px;color:#cbbbe9;font-size:12px}
+</style>
+</head>
+<body>
+<header>
+<h1>π PI RUNNER</h1>
+<p>Run through the Pi Galaxy!</p>
+</header>
+<div id="stats">⭐ Score: <span id="score">0</span>　🟡 Pi Coins: <span id="coins">0</span></div>
+<canvas id="game"></canvas>
+<div class="controls">
+<button onclick="move(-1)">⬅ LEFT</button>
+<button onclick="jump()">⬆ JUMP</button>
+<button onclick="slide()">⬇ SLIDE</button>
+<button onclick="move(1)">RIGHT ➡</button>
+</div>
+<button id="start" onclick="startGame()">▶ START RUNNING</button>
+<p id="message">Collect Pi coins and dodge obstacles!</p>
+<footer>Pi Runner • Virtual coins only — not real Pi cryptocurrency.</footer>
+<script>
+const c=document.getElementById('game'),ctx=c.getContext('2d');
+let lane=1,score=0,coins=0,running=false,objects=[],playerY=0,jumping=false,sliding=false,last=0,speed=3,spawn=0;
+function resize(){c.width=Math.min(500,innerWidth);c.height=Math.max(350,innerHeight*.65)}
+resize();addEventListener('resize',resize);
+function draw(){
+let w=c.width,h=c.height;
+ctx.fillStyle='#211044';ctx.fillRect(0,0,w,h);
+ctx.fillStyle='#351a62';ctx.beginPath();ctx.moveTo(w*.25,0);ctx.lineTo(w*.75,0);ctx.lineTo(w,h);ctx.lineTo(0,h);ctx.fill();
+ctx.strokeStyle='#a77aff';ctx.lineWidth=2;
+for(let i=1;i<3;i++){ctx.beginPath();ctx.moveTo(w*(.25+i*.25),0);ctx.lineTo(w*i/3,h);ctx.stroke()}
+ctx.fillStyle='#f5b82e';
+for(let i=0;i<12;i++){let x=(i*83+20)%w,y=(i*57+30)%h;ctx.beginPath();ctx.arc(x,y,2,0,7);ctx.fill()}
+objects.forEach(o=>{
+let x=w*(.17+o.lane*.33),y=o.y;
+if(o.type==='coin'){ctx.fillStyle='#f5b82e';ctx.beginPath();ctx.arc(x,y,12,0,7);ctx.fill();ctx.fillStyle='#4b2579';ctx.font='bold 13px Arial';ctx.textAlign='center';ctx.fillText('π',x,y+5)}
+else{ctx.fillStyle='#ff5470';ctx.fillRect(x-16,y-18,32,36);ctx.fillStyle='white';ctx.fillRect(x-9,y-10,18,4)}
+});
+let px=w*(.17+lane*.33),py=h-65-playerY;
+ctx.fillStyle='#f5b82e';ctx.beginPath();ctx.arc(px,py-22,13,0,7);ctx.fill();
+ctx.fillStyle='#8e5bff';ctx.fillRect(px-12,py-9,24,sliding?15:28);
+ctx.fillStyle='#fff';ctx.fillRect(px-10,py+15,7,sliding?5:16);ctx.fillRect(px+3,py+15,7,sliding?5:16);
+if(!running){ctx.fillStyle='rgba(10,5,25,.45)';ctx.fillRect(0,0,w,h);ctx.fillStyle='white';ctx.textAlign='center';ctx.font='bold 24px Arial';ctx.fillText('PI RUNNER',w/2,h/2-12);ctx.font='16px Arial';ctx.fillText('Tap START to play',w/2,h/2+20)}
+}
+function move(d){if(running)lane=Math.max(0,Math.min(2,lane+d));draw()}
+function jump(){if(running&&!jumping){jumping=true;playerY=70;setTimeout(()=>{playerY=0;jumping=false},550)}}
+function slide(){if(running&&!sliding){sliding=true;setTimeout(()=>sliding=false,500)}}
+function startGame(){score=0;coins=0;lane=1;objects=[];speed=3;spawn=0;running=true;last=0;document.getElementById('message').textContent='Keep running! Avoid the red obstacles!';document.getElementById('start').textContent='↻ RESTART';requestAnimationFrame(loop)}
+function loop(t){if(!running)return;if(!last)last=t;let dt=Math.min(40,t-last);last=t;score+=Math.floor(dt/10);spawn+=dt;
+if(spawn>650){spawn=0;objects.push({lane:Math.floor(Math.random()*3),y:-20,type:Math.random()<.65?'coin':'obstacle'})}
+objects.forEach(o=>o.y+=speed*dt/16);speed+=.0005*dt;
+for(let o of objects){if(o.lane===lane&&o.y>c.height-100&&o.y<c.height-35){if(o.type==='coin'){o.y=c.height+100;coins++}else if(!jumping&&!sliding){running=false;document.getElementById('message').textContent='Game over! Score: '+score+' • Tap restart to try again.'}}}
+objects=objects.filter(o=>o.y<c.height+30);document.getElementById('score').textContent=score;document.getElementById('coins').textContent=coins;draw();if(running)requestAnimationFrame(loop)}
+let sx=0,sy=0;
+c.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;sy=e.touches[0].clientY},{passive:true});
+c.addEventListener('touchend',e=>{let dx=e.changedTouches[0].clientX-sx,dy=e.changedTouches[0].clientY-sy;if(Math.abs(dx)>30)move(dx>0?1:-1);else if(dy<-25)jump();else if(dy>25)slide()},{passive:true});
+c.addEventListener('click',e=>{if(running){if(e.clientX<c.getBoundingClientRect().left+c.clientWidth/2)move(-1);else move(1)}});
+draw();
+</script>
+</body>
+  </html>
